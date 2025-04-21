@@ -1,0 +1,25 @@
+{
+  "name": "hi-elysia",
+  "version": "1.0.50",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "bun run --watch src/app.ts"
+  },
+  "dependencies": {
+    "@elysiajs/swagger": "^1.2.2",
+    "@node-rs/argon2": "^2.0.2",
+    "@node-rs/argon2-wasm32-wasi": "^2.0.2",
+    "@oslojs/crypto": "^1.0.1",
+    "@oslojs/encoding": "^1.1.0",
+    "drizzle-kit": "^0.31.0",
+    "drizzle-orm": "^0.41.0",
+    "elysia": "latest",
+    "ioredis": "^5.6.1",
+    "jose": "^6.0.10",
+    "postgres": "^3.4.5"
+  },
+  "devDependencies": {
+    "bun-types": "latest"
+  },
+  "module": "src/index.js"
+}
