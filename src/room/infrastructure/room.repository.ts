@@ -37,9 +37,12 @@ export class RoomRepository {
     return room[0];
   }
 
-  static async getPrivateChat(userId1: string, userId2: string): Promise<table.Room | undefined> {
+  static async getPrivateChat(
+    userId1: string,
+    userId2: string
+  ): Promise<table.Room | undefined> {
     const [smallerId, largerId] = [userId1, userId2].sort();
-    
+
     const room = await db
       .select()
       .from(table.room)
@@ -72,7 +75,7 @@ export class RoomRepository {
       userId,
       roomId,
       role: "member",
-      joinedAt: new Date()
+      joinedAt: new Date(),
     });
   }
 }

@@ -1,5 +1,8 @@
 import { WS } from "../../shared/infrastructure/utils/types";
-import { createMessage, CreateMessageRequest } from "../../message/application/message.usecase";
+import {
+  createMessage,
+  CreateMessageRequest,
+} from "../../message/application/message.usecase";
 
 export async function joinRoom(ws: WS, room: string) {
   if (!ws.isSubscribed(room)) {
@@ -22,13 +25,14 @@ export async function sendMessage(
 
   try {
     // Crear el mensaje en la base de datos
+    console.log(ws.body);
     const messageRequest: CreateMessageRequest = {
       content,
-      authorId: ws.body.user!
+      authorId: ws.body.user!,
     };
 
     const result = await createMessage(room, messageRequest);
-    
+
     if (result.status === "success") {
       // Publicar el mensaje a todos los suscriptores
       ws.publish(room, {
