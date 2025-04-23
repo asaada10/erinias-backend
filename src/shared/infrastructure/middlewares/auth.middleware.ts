@@ -1,20 +1,19 @@
 import { Elysia } from "elysia";
 import Token from "../db/token";
+import { CookieOptions } from "elysia";
 
 export const authMiddleware = (app: Elysia) =>
   app.guard({
-    beforeHandle: async ({ request, set, headers }) => {
+    beforeHandle: async ({ request, set, cookie, headers }) => {
       const path = new URL(request.url).pathname;
       // Excluir rutas de autenticación
       if (path === "/v1/auth/login" || path === "/v1/auth/register") {
         return;
       }
 
-      const authHeader = headers["authorization"];
-      const accessToken = authHeader?.startsWith("Bearer ")
-        ? authHeader.split(" ")[1]
-        : null;
-      const refreshToken = headers["x-refresh-token"];
+      // Obtener tokens de las cookies
+      const accessToken = cookie.access_token?.value;
+      const refreshToken = cookie.refresh_token?.value;
 
       if (!accessToken) {
         set.status = 401;
@@ -22,34 +21,61 @@ export const authMiddleware = (app: Elysia) =>
       }
 
       try {
+        // Intentar validar el token de acceso
         const payload = await Token.validate(accessToken, "access");
-        if (!payload) {
-          set.status = 401;
-          return { status: "error", message: "Invalid access token" };
+        if (payload) {
+          return; // Token válido, continuar con la petición
         }
       } catch (error) {
-        if (error instanceof Error && error.name === "JWTExpired") {
-          if (!refreshToken) {
-            set.status = 401;
-            return { status: "error", message: "Access token expired" };
-          }
-
-          try {
-            const newTokens = await Token.renewTokens(refreshToken, headers);
-            if (!newTokens) {
-              set.status = 401;
-              return { status: "error", message: "Invalid refresh token" };
-            }
-
-            set.headers["authorization"] = `Bearer ${newTokens.accessToken}`;
-            set.headers["x-refresh-token"] = newTokens.refreshToken;
-          } catch (refreshError) {
-            set.status = 401;
-            return { status: "error", message: "Failed to refresh tokens" };
-          }
-        } else {
+        // Si el token de acceso falla, intentar usar el refresh token
+        if (!refreshToken) {
           set.status = 401;
-          return { status: "error", message: "Invalid token" };
+          return { status: "error", message: "No refresh token available" };
+        }
+
+        try {
+          // Validar el refresh token
+          const refreshPayload = await Token.validate(refreshToken, "refresh");
+          if (!refreshPayload) {
+            set.status = 401;
+            return { status: "error", message: "Invalid refresh token" };
+          }
+
+          // Generar nuevos tokens
+          const newTokens = await Token.renewTokens(refreshToken, headers);
+          if (!newTokens) {
+            set.status = 401;
+            return {
+              status: "error",
+              message: "Failed to generate new tokens",
+            };
+          }
+
+          // Actualizar las cookies con los nuevos tokens
+          const commonCookieOptions: CookieOptions = {
+            path: "/",
+            httpOnly: true,
+            sameSite: "none" as const,
+            secure: true,
+          };
+
+          cookie["access_token"].set({
+            value: newTokens.accessToken,
+            ...commonCookieOptions,
+            maxAge: 15 * 60, // 15 minutos
+          });
+
+          cookie["refresh_token"].set({
+            value: newTokens.refreshToken,
+            ...commonCookieOptions,
+            maxAge: 30 * 24 * 60 * 60, // 30 días
+          });
+
+          // Continuar con la petición
+          return;
+        } catch (refreshError) {
+          set.status = 401;
+          return { status: "error", message: "Failed to refresh tokens" };
         }
       }
     },
