@@ -78,4 +78,47 @@ export class RoomRepository {
       joinedAt: new Date(),
     });
   }
+
+  static async getAllRooms(userId: string): Promise<{
+    id: string;
+    name: string | null;
+    users: {
+      id: string;
+    }[];
+  }[]> {
+    const rooms = await db
+      .select({
+        room: {
+          id: table.room.id,
+          name: table.room.name,
+        },
+        users: {
+          id: table.user_room.userId,
+        },
+      })
+      .from(table.user_room)
+      .innerJoin(table.room, eq(table.user_room.roomId, table.room.id))
+      .where(eq(table.user_room.userId, userId))
+      .groupBy(table.room.id)
+      .then((rows) => {
+        const roomMap = new Map<string, { room: any; users: any[] }>();
+        rows.forEach((row) => {
+          if (!roomMap.has(row.room.id)) {
+            roomMap.set(row.room.id, {
+              room: row.room,
+              users: [],
+            });
+          }
+          roomMap.get(row.room.id)?.users.push(row.users);
+        });
+
+        return Array.from(roomMap.values()).map(({ room, users }) => ({
+          id: room.id,
+          name: room.name,
+          users,
+        }));
+      });
+
+    return rooms;
+  }
 }

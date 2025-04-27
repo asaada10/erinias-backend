@@ -10,9 +10,76 @@ import {
   CreateRoomResponseSchema,
   CreateRoomErrorSchema,
 } from "../application/create.usecase";
+import {
+  getRoom,
+  GetRoomRequestSchema,
+  GetRoomResponseSchema,
+  GetRoomErrorSchema,
+} from "../application/index.usecase";
+import {
+  getAllRooms,
+  GetAllRoomsResponseSchema,
+  GetAllRoomsErrorSchema,
+} from "../application/all.usecase";
 
 export const RoomController = new Elysia().group("/room", (app) =>
   app
+    .get(
+      "/",
+      async ({ params, set }) => {
+        try {
+          const result = await getRoom(params.id);
+          set.status = 200;
+          return result;
+        } catch (error) {
+          set.status = 404;
+          return {
+            status: "error",
+            message: error instanceof Error ? error.message : "Room not found",
+          };
+        }
+      },
+      {
+        params: t.Object({
+          id: t.String(),
+        }),
+        response: {
+          200: GetRoomResponseSchema,
+          404: GetRoomErrorSchema,
+        },
+        detail: {
+          tags: ["Room"],
+          summary: "Get a room by ID",
+          description: "Retrieve a room by its unique identifier",
+        },
+      }
+    )
+    .get(
+      "/all",
+      async ({ set, headers }) => {
+        try {
+          const result = await getAllRooms(headers["x-user-id"]);
+          set.status = 200;
+          return result;
+        } catch (error) {
+          set.status = 400;
+          return {
+            message: error instanceof Error ? error.message : "Unknown error"
+          };
+        }
+      },
+      {
+        response: {
+          200: GetAllRoomsResponseSchema,
+          400: GetAllRoomsErrorSchema,
+        },
+        detail: {
+          tags: ["Room"],
+          summary: "Get all rooms for a user",
+          description: "Retrieve all rooms for a user",
+        },
+      }
+    )
     .post(
       "/search",
       async ({ body, set }) => {

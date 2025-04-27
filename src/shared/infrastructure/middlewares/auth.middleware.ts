@@ -24,6 +24,11 @@ export const authMiddleware = (app: Elysia) =>
         // Intentar validar el token de acceso
         const payload = await Token.validate(accessToken, "access");
         if (payload) {
+          // Adjuntar la información decodificada a la request (usando headers como workaround)
+          set.headers["x-user-id"] = payload.id as string;
+          set.headers["x-user-username"] = payload.username as string;
+          set.headers["x-user-role"] = payload.role as string;
+          // Puedes añadir más campos si lo necesitas
           return; // Token válido, continuar con la petición
         }
       } catch (error) {
@@ -70,6 +75,14 @@ export const authMiddleware = (app: Elysia) =>
             ...commonCookieOptions,
             maxAge: 30 * 24 * 60 * 60, // 30 días
           });
+
+          // Decodificar el nuevo access token y adjuntar la info
+          const newPayload = await Token.validate(newTokens.accessToken, "access");
+          if (newPayload) {
+            set.headers["x-user-id"] = newPayload.id as string;
+            set.headers["x-user-username"] = newPayload.username as string;
+            set.headers["x-user-role"] = newPayload.role as string;
+          }
 
           // Continuar con la petición
           return;
