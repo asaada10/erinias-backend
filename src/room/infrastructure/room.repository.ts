@@ -1,5 +1,5 @@
 import { db } from "../../shared/infrastructure/db";
-import { eq, and, exists } from "drizzle-orm";
+import { eq, and, exists, inArray } from "drizzle-orm";
 import * as table from "../../shared/infrastructure/db/schema";
 import Snowflake from "../../shared/infrastructure/utils/Snowflake";
 
@@ -82,43 +82,39 @@ export class RoomRepository {
   static async getAllRooms(userId: string): Promise<{
     id: string;
     name: string | null;
-    users: {
-      id: string;
-    }[];
+    users: { id: string }[];
   }[]> {
-    const rooms = await db
+    // Usando drizzle para obtener todas las salas y los usuarios de cada sala
+    const roomsRaw = await db
       .select({
-        room: {
-          id: table.room.id,
-          name: table.room.name,
-        },
-        users: {
-          id: table.user_room.userId,
-        },
+        id: table.room.id,
+        name: table.room.name,
       })
-      .from(table.user_room)
-      .innerJoin(table.room, eq(table.user_room.roomId, table.room.id))
-      .where(eq(table.user_room.userId, userId))
-      .groupBy(table.room.id)
-      .then((rows) => {
-        const roomMap = new Map<string, { room: any; users: any[] }>();
-        rows.forEach((row) => {
-          if (!roomMap.has(row.room.id)) {
-            roomMap.set(row.room.id, {
-              room: row.room,
-              users: [],
-            });
-          }
-          roomMap.get(row.room.id)?.users.push(row.users);
-        });
+      .from(table.room)
+      .innerJoin(table.user_room, eq(table.user_room.roomId, table.room.id))
+      .where(eq(table.user_room.userId, userId));
 
-        return Array.from(roomMap.values()).map(({ room, users }) => ({
-          id: room.id,
-          name: room.name,
-          users,
-        }));
-      });
+    // Para cada sala, obtener todos los usuarios (solo id) usando drizzle
+    const roomIds = roomsRaw.map(r => r.id);
+    let usersByRoom: Record<string, { id: string }[]> = {};
+    if (roomIds.length > 0) {
+      const usersRaw = await db
+        .select({
+          roomId: table.user_room.roomId,
+          userId: table.user_room.userId,
+        })
+        .from(table.user_room)
+        .where(inArray(table.user_room.roomId, roomIds));
+      for (const { roomId, userId } of usersRaw) {
+        if (!usersByRoom[roomId]) usersByRoom[roomId] = [];
+        usersByRoom[roomId].push({ id: userId });
+      }
+    }
 
-    return rooms;
+    return roomsRaw.map(room => ({
+      id: room.id,
+      name: room.name,
+      users: usersByRoom[room.id] || [],
+    }));
   }
 }

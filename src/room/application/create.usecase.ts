@@ -3,7 +3,7 @@ import { RoomRepository } from "../infrastructure/room.repository";
 
 export const CreateRoomRequestSchema = t.Object({
   name: t.Optional(t.String()),
-  userIds: t.Array(t.String()),
+  userIds: t.Array(t.String()), // @Todo: Incluir ellos usuairos.
   isPrivate: t.Optional(t.Boolean()),
 });
 
@@ -53,7 +53,7 @@ export const createRoom = async (room: CreateRoomRequest) => {
     }
 
     // Crear la sala
-    const newRoom = await RoomRepository.create({name: room.name ?? null});
+    const newRoom = await RoomRepository.create({ name: room.name ?? null });
 
     // Agregar usuarios a la sala
     for (const userId of room.userIds) {
