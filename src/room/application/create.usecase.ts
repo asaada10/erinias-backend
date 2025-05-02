@@ -1,8 +1,9 @@
 import { Static, t } from "elysia";
 import { RoomRepository } from "../infrastructure/room.repository";
+import { InternalServerError } from "../../shared/infrastructure/errors";
 
 export const CreateRoomRequestSchema = t.Object({
-  name: t.Optional(t.String()),
+  name: t.Nullable(t.String()),
   userIds: t.Array(t.String()), // @Todo: Incluir ellos usuairos.
   isPrivate: t.Optional(t.Boolean()),
 });
@@ -10,12 +11,12 @@ export const CreateRoomRequestSchema = t.Object({
 export const CreateRoomResponseSchema = t.Object({
   status: t.Literal("success"),
   data: t.Object({
-    room: t.Object({
-      id: t.String(),
-      name: t.Nullable(t.String()),
-      createdAt: t.Date(),
-      updatedAt: t.Date(),
-    }),
+  room: t.Object({
+    id: t.String(),
+    name: t.Nullable(t.String()),
+    createdAt: t.Date(),
+    updatedAt: t.Date(),
+  }),
   }),
 });
 
@@ -28,53 +29,45 @@ export type CreateRoomRequest = Static<typeof CreateRoomRequestSchema>;
 export type CreateRoomResponse = Static<typeof CreateRoomResponseSchema>;
 export type CreateRoomError = Static<typeof CreateRoomErrorSchema>;
 
-export const createRoom = async (room: CreateRoomRequest) => {
+export const createRoom = async (room: CreateRoomRequest, userId: string) => {
   try {
     // Si es un chat privado entre dos personas, buscar primero si existe
     if (room.isPrivate && room.userIds.length === 2) {
       const existingRoom = await RoomRepository.getPrivateChat(
-        room.userIds[0],
+        userId,
         room.userIds[1]
       );
 
       if (existingRoom) {
         return {
-          status: "success",
-          data: {
-            room: {
-              id: existingRoom.id,
-              name: existingRoom.name,
-              createdAt: existingRoom.createdAt,
-              updatedAt: existingRoom.updatedAt,
-            },
+          room: {
+            id: existingRoom.id,
+            name: existingRoom.name,
+            createdAt: existingRoom.createdAt,
+            updatedAt: existingRoom.updatedAt,
           },
         };
       }
     }
-
     // Crear la sala
     const newRoom = await RoomRepository.create({ name: room.name ?? null });
 
     // Agregar usuarios a la sala
-    for (const userId of room.userIds) {
-      await RoomRepository.addUserToRoom(userId, newRoom.id!);
+    for (const user of new Set([userId, ...room.userIds])) {
+      await RoomRepository.addUserToRoom(user, newRoom.id!);
     }
 
+    // Ensure all required fields are returned
     return {
-      status: "success",
-      data: {
-        room: {
-          id: newRoom.id,
-          name: newRoom.name,
-          createdAt: newRoom.createdAt,
-          updatedAt: newRoom.updatedAt,
-        },
+      room: {
+        id: newRoom.id!,
+        name: newRoom.name ?? null,
+        createdAt: newRoom.createdAt!,
+        updatedAt: newRoom.updatedAt!,
       },
     };
   } catch (error) {
-    return {
-      status: "error",
-      message: error instanceof Error ? error.message : "Failed to create room",
-    };
+    console.log(error);
+    throw new InternalServerError(); // Throw error instead of returning status
   }
 };

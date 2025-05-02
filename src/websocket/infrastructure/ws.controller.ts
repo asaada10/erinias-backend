@@ -14,8 +14,20 @@ export const WsController = new Elysia().group("/ws", (app) =>
       content: t.String(),
       domain: t.String(),
     }),
+    beforeHandle(ws) {
+      console.log(ws.headers.cookie)
+      // const userId = ws.headers["x-user-id"];
+      // if (!userId) {
+      //   console.log("Conexión rechazada: falta el encabezado x-user-id");
+      //   // ws.close(4001, "Falta el encabezado x-user-id");
+      //   return false; // Cancel the WebSocket upgrade
+      // }
+      // console.log(`Conexión aceptada para el usuario: ${userId}`);
+      return true; // Allow the WebSocket upgrade
+    },
     open(ws) {
       console.log("Usuario conectado");
+      console.log("x-user-id:", ws.data.headers["x-user-id"]);
     },
 
     async message(ws: WS, data) {

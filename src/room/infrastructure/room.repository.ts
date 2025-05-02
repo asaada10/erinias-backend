@@ -17,7 +17,12 @@ export class RoomRepository {
         createdAt: new Date(),
         updatedAt: new Date(),
       })
-      .returning({ id: table.room.id, username: table.room.name });
+      .returning({
+        id: table.room.id,
+        name: table.room.name,
+        createdAt: table.room.createdAt,
+        updatedAt: table.room.updatedAt,
+      });
     return newRoom[0];
   }
 
@@ -69,6 +74,9 @@ export class RoomRepository {
   }
 
   static async addUserToRoom(userId: string, roomId: string): Promise<void> {
+    if (!userId) {
+      throw new Error("User ID is required");
+    }
     const id = Snowflake.generate(new Date());
     await db.insert(table.user_room).values({
       id,
@@ -78,6 +86,7 @@ export class RoomRepository {
       joinedAt: new Date(),
     });
   }
+  
 
   static async getAllRooms(userId: string): Promise<{
     id: string;

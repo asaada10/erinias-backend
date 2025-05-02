@@ -9,6 +9,7 @@ import {
   UpdateProfileRequestSchema,
 } from "../application/update.usecase";
 import { UserRepository } from "../infrastructure/user.repository";
+import { getProfileUseCase, ProfileResponseSchema } from "../application/profile.usecase";
 
 export const UserController = new Elysia().group("/user", (app) =>
   app
@@ -51,30 +52,14 @@ export const UserController = new Elysia().group("/user", (app) =>
     )
     .get(
       "/profile",
-      async ({ headers, set }) => {
+      async ({ request, set }) => {
         try {
-          const userId = headers["x-user-id"];
-          if (!userId) {
-            set.status = 401;
-            return {
-              status: "error",
-              message: "Unauthorized",
-            };
-          }
+          const userId = request.headers.get("x-user-id");
+          const profile = await getProfileUseCase(userId!);
 
-          const user = await UserRepository.getById(userId);
-          if (!user) {
-            set.status = 404;
-            return {
-              status: "error",
-              message: "User not found",
-            };
-          }
-          const profile = await UserRepository.toProfile(user);
-          set.status = 200;
           return {
             status: "success",
-            data: profile,
+            data: { profile }, // Ensure 'profile' is directly under 'data'
           };
         } catch (error) {
           set.status = 500;
@@ -87,17 +72,7 @@ export const UserController = new Elysia().group("/user", (app) =>
       },
       {
         response: {
-          200: t.Object({
-            status: t.Literal("success"),
-            data: t.Object({
-              username: t.String(),
-              id: t.String(),
-              avatar: t.Nullable(t.String()),
-              createdAt: t.Date(),
-              isActive: t.Boolean(),
-              role: t.String(),
-            }),
-          }),
+          200: ProfileResponseSchema,
           401: t.Object({
             status: t.Literal("error"),
             message: t.String(),

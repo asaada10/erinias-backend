@@ -119,11 +119,13 @@ export const RoomController = new Elysia().group("/room", (app) =>
     )
     .post(
       "/create",
-      async ({ body, set }) => {
+      async ({ body, set, request }) => {
         try {
-          const result = await createRoom(body);
+          const userId = request.headers.get("x-user-id");
+          const result = await createRoom(body, userId!);
+          console.log(result);
           set.status = 201;
-          return result;
+          return {status: "success", data: result};
         } catch (error) {
           set.status = 500;
           return {
@@ -136,7 +138,7 @@ export const RoomController = new Elysia().group("/room", (app) =>
         body: CreateRoomRequestSchema,
         response: {
           201: CreateRoomResponseSchema,
-          400: CreateRoomErrorSchema,
+          500: CreateRoomErrorSchema,
         },
         detail: {
           tags: ["Room"],
