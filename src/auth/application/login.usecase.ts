@@ -24,7 +24,7 @@ export const loginUseCase = async (
 ): Promise<LoginUserResponse> => {
   const user = await UserRepository.getByEmail(loginData.email);
   if (!user) {
-    throw new Error("User not found");
+    throw new Error("Invalid credentials");
   }
 
   const isPasswordValid = await Bun.password.verify(
@@ -33,7 +33,7 @@ export const loginUseCase = async (
   );
 
   if (!isPasswordValid) {
-    throw new Error("Invalid password");
+    throw new Error("Invalid credentials");
   }
 
   const { id, username } = user;
