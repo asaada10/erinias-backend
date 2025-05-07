@@ -1,5 +1,6 @@
 import { Static, t } from "elysia";
 import { RoomRepository } from "../infrastructure/room.repository";
+import { UserRepository } from "../../user/infrastructure/user.repository";
 
 export const SearchRoomRequestSchema = t.Object({
   name: t.Optional(t.String()),
@@ -28,11 +29,24 @@ export const searchUseCase = async (room: SearchUserRequest) => {
       rooms.push(...results);
     }
   }
+  if (room.name) {
+    const userResults = await UserRepository.getByUsername(room.name);
+    if (userResults) {
+      rooms.push(...userResults.map((user) => ({
+        name: user.username,
+        id: user.id,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        domainId: null,
+      })));
+    }
+  }
   if (room.id) {
     const results = await RoomRepository.getById(room.id);
     if (results) {
       rooms.push(results);
     }
+    
   }
   return {
     rooms: rooms.map((room) => ({
