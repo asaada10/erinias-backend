@@ -55,6 +55,34 @@ export const RoomController = new Elysia().group("/room", (app) =>
       }
     )
     .get(
+      "/:id",
+      async ({ params, set }) => {
+        try {
+          const result = await getRoom(params.id);
+          set.status = 200;
+          return result;
+        } catch (error) {
+          set.status = 404;
+          return {
+            status: "error",
+            message: error instanceof Error ? error.message : "Room not found",
+          };
+        }
+      },
+      {
+        params: GetRoomRequestSchema,
+        response: {
+          200: GetRoomResponseSchema,
+          404: GetRoomErrorSchema,
+        },
+        detail: {
+          tags: ["Room"],
+          summary: "Get a room by ID",
+          description: "Retrieve a room by its unique identifier",
+        },
+      }
+    )
+    .get(
       "/all",
       async ({ set, headers }) => {
         try {

@@ -6,13 +6,13 @@ import {
   GetMessagesErrorSchema,
 } from "../application/message.usecase";
 
-export const MessageController = new Elysia().group("/room/:roomId/message", (app) =>
+export const MessageController = new Elysia().group("/room/:id/message", (app) =>
   app
     .get(
       "/",
       async ({ query, set, params }) => {
         try {
-          const result = await getMessages(params.roomId, query);
+          const result = await getMessages(params.id, query);
           set.status = 200;
           return {
             status: "success" as const,

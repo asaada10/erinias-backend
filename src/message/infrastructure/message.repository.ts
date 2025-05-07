@@ -11,6 +11,17 @@ import {
 
 export class MessageRepository {
   static async create(roomId: string, message: CreateMessageRequest): Promise<CreateMessageResponse["data"]["message"]> {
+    // Validate if the roomId exists
+    const roomExists = await db
+      .select()
+      .from(table.room)
+      .where(eq(table.room.id, roomId))
+      .limit(1);
+
+    if (roomExists.length === 0) {
+      throw new Error(`Room with ID ${roomId} does not exist.`);
+    }
+
     const id = Snowflake.generate(new Date());
     const newMessage = await db
       .insert(table.message)
@@ -24,7 +35,7 @@ export class MessageRepository {
         edited: false,
       })
       .returning();
-    
+
     return newMessage[0];
   }
 
