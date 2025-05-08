@@ -39,6 +39,7 @@ export async function sendMessage(
         type: "message",
         content: content,
         domain: domain,
+        authorId: ws.body.user,
         room: room,
       });
     } else {

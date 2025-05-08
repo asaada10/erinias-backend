@@ -55,11 +55,11 @@ export const UserController = new Elysia().group("/user", (app) =>
       async ({ request, set }) => {
         try {
           const userId = request.headers.get("x-user-id");
-          const profile = await getProfileUseCase(userId!);
+          const data = await getProfileUseCase(userId!);
 
           return {
             status: "success",
-            data: { profile }, // Ensure 'profile' is directly under 'data'
+            data, // Ensure 'profile' is directly under 'data'
           };
         } catch (error) {
           set.status = 500;

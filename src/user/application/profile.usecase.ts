@@ -6,14 +6,14 @@ import { UserRepository } from "../infrastructure/user.repository";
 export const ProfileResponseSchema = t.Object({
   status: t.Literal("success"),
   data: t.Object({
-    profile: t.Object({
+  
   username: t.String(),
   id: t.String(),
   avatar: t.Nullable(t.String()),
   createdAt: t.Date(),
   isActive: t.Boolean(),
   role: t.String(),
-}),
+
   }),
 });
 
