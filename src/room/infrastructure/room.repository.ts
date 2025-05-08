@@ -47,7 +47,10 @@ export class RoomRepository {
     userId2: string
   ): Promise<table.Room | undefined> {
     const [smallerId, largerId] = [userId1, userId2].sort();
-
+    console.log(
+      `Fetching private chat room for users: ${smallerId} and ${largerId}`
+    );
+    try {
     const room = await db
       .select()
       .from(table.room)
@@ -71,6 +74,10 @@ export class RoomRepository {
       .limit(1);
 
     return room[0]?.room;
+    } catch (error) {
+      console.error("Error fetching private chat room:", error);
+      throw new Error("Error fetching private chat room");
+    }
   }
 
   static async addUserToRoom(userId: string, roomId: string): Promise<void> {

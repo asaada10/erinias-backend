@@ -5,7 +5,6 @@ import { InternalServerError } from "../../shared/infrastructure/errors";
 export const CreateRoomRequestSchema = t.Object({
   name: t.Nullable(t.String()),
   userIds: t.Array(t.String()), // @Todo: Incluir ellos usuairos.
-  isPrivate: t.Optional(t.Boolean()),
 });
 
 export const CreateRoomResponseSchema = t.Object({
@@ -32,10 +31,10 @@ export type CreateRoomError = Static<typeof CreateRoomErrorSchema>;
 export const createRoom = async (room: CreateRoomRequest, userId: string) => {
   try {
     // Si es un chat privado entre dos personas, buscar primero si existe
-    if (room.isPrivate && room.userIds.length === 2) {
+    if ([userId, ...room.userIds].length === 2) {
       const existingRoom = await RoomRepository.getPrivateChat(
         userId,
-        room.userIds[1]
+        room.userIds[0]
       );
 
       if (existingRoom) {
