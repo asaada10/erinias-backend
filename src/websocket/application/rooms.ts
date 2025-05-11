@@ -25,12 +25,10 @@ export async function sendMessage(
 
   try {
     // Crear el mensaje en la base de datos
-    console.log(ws.body);
     const messageRequest: CreateMessageRequest = {
       content,
       authorId: ws.body.user!,
     };
-
     const result = await createMessage(room, messageRequest);
 
     if (result.status === "success") {

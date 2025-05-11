@@ -84,11 +84,11 @@ export const RoomController = new Elysia().group("/room", (app) =>
     )
     .get(
       "/all",
-      async ({ set, headers }) => {
+      async ({ set, request }) => {
         try {
-          const result = await getAllRooms(headers["x-user-id"]);
+          const data = await getAllRooms(request.headers.get("x-user-id")!);
           set.status = 200;
-          return result;
+          return {data};
         } catch (error) {
           set.status = 400;
           return {

@@ -25,7 +25,6 @@ export const getProfileUseCase = async (userId: string) => {
     if (!user) {
       throw new Error("User not found");
     }
-
     return {
       username: user.username,
       id: user.id,

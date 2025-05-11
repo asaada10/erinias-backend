@@ -20,9 +20,9 @@ export type RegisteUserResponse = Static<typeof RegisteUserResponseSchema>;
 export const registerUseCase = async (
   userData: RegisterUserRequest
 ): Promise<RegisteUserResponse> => {
-  const existingUser = await UserRepository.getByEmail(userData.username);
+  const existingUser = await UserRepository.getByEmail(userData.email);
   if (existingUser) {
-    throw new Error("Username already exists");
+    throw new Error("Account already exists");
   }
 
   userData.password = await Bun.password.hash(userData.password);

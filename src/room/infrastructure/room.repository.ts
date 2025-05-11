@@ -72,7 +72,7 @@ export class RoomRepository {
         )
       )
       .limit(1);
-
+      console.log("Room found:", room);
     return room[0]?.room;
     } catch (error) {
       console.error("Error fetching private chat room:", error);

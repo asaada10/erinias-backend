@@ -40,6 +40,7 @@ export const WsController = new Elysia().group("/ws", (app) =>
         }
 
         if (data.type === "message") {
+          console.log("Mensaje recibido:", data);
           await sendMessage(ws, data.room, data.content, data.domain);
         }
       } catch (error) {

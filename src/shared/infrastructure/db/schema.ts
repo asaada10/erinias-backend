@@ -15,7 +15,7 @@ import { PermissionFlags } from "../utils/types.d";
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
   dateOfBirth: date("date_of_birth"),
-  username: text("username").notNull().unique(),
+  username: text("username").notNull(),
   email: text("email").notNull().unique(),
   avatar: text("avatar"),
   passwordHash: text("password_hash").notNull(),
