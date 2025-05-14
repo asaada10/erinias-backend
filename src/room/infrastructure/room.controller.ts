@@ -88,7 +88,7 @@ export const RoomController = new Elysia().group("/room", (app) =>
         try {
           const data = await getAllRooms(request.headers.get("x-user-id")!);
           set.status = 200;
-          return {data};
+          return data; // Devuelve directamente el objeto esperado
         } catch (error) {
           set.status = 400;
           return {
@@ -151,9 +151,9 @@ export const RoomController = new Elysia().group("/room", (app) =>
         try {
           const userId = request.headers.get("x-user-id");
           const result = await createRoom(body, userId!);
-          console.log(result);
+          console.log({ status: "success", data: { room: result } }); // Modificado
           set.status = 201;
-          return {status: "success", data: result};
+          return { status: "success", data: { room: result } }; // Envuelve en data.room
         } catch (error) {
           set.status = 500;
           return {

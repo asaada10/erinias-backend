@@ -3,10 +3,16 @@ import {
   createMessage,
   CreateMessageRequest,
 } from "../../message/application/message.usecase";
+import { connectionManager } from "./connectionManager";
 
 export async function joinRoom(ws: WS, room: string) {
   if (!ws.isSubscribed(room)) {
     ws.subscribe(room);
+    connectionManager.get(ws.body.user!)?.forEach((s) => {
+      if (s !== ws) {
+        s.subscribe(room);
+      }
+    });
     console.log(`El usuario ${ws.body.user} se ha unido a la sala ${room}`);
   }
 }

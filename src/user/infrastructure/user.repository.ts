@@ -1,5 +1,5 @@
 import { db } from "../../shared/infrastructure/db";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import * as table from "../../shared/infrastructure/db/schema";
 import Snowflake from "../../shared/infrastructure/utils/Snowflake";
 
@@ -7,7 +7,6 @@ export interface CreateUserParms {
   username: string;
   email: string;
   password: string;
-  date: string;
 }
 
 export interface UpdateProfileResponse {
@@ -21,6 +20,14 @@ export interface UpdateProfileResponse {
 
 export class UserRepository {
   static async create(user: CreateUserParms): Promise<Partial<table.User>> {
+    const existingUser = await db
+      .select()
+      .from(table.user)
+      .where(or(eq(table.user.username, user.username), eq(table.user.email, user.email)));
+
+    if (existingUser.length > 0) {
+      throw new Error("Username or email is already in use");
+    }
     const newUser = await db
       .insert(table.user)
       .values({
@@ -28,7 +35,6 @@ export class UserRepository {
         username: user.username,
         email: user.email,
         passwordHash: user.password,
-        dateOfBirth: user.date,
       })
       .returning({ id: table.user.id, username: table.user.username });
     return newUser[0];

@@ -26,54 +26,106 @@ export class RoomRepository {
     return newRoom[0];
   }
 
-  static async getByName(name: string): Promise<table.Room[]> {
-    const room = await db
+  static async getByName(name: string): Promise<(table.Room & { users: { id: string }[] })[]> {
+    const rooms = await db
       .select()
       .from(table.room)
       .where(eq(table.room.name, name));
-    return room;
+
+    const roomIds = rooms.map((room) => room.id);
+    const usersRaw = await db
+      .select({
+        roomId: table.user_room.roomId,
+        userId: table.user_room.userId,
+      })
+      .from(table.user_room)
+      .where(inArray(table.user_room.roomId, roomIds));
+
+    const usersByRoom: Record<string, { id: string }[]> = {};
+    for (const { roomId, userId } of usersRaw) {
+      if (!usersByRoom[roomId]) usersByRoom[roomId] = [];
+      usersByRoom[roomId].push({ id: userId });
+    }
+
+    return rooms.map((room) => ({
+      ...room,
+      users: usersByRoom[room.id] || [],
+    }));
   }
 
-  static async getById(id: string): Promise<table.Room | undefined> {
+  static async getById(id: string): Promise<(table.Room & { users: {
+    name: null;
+    email: null;
+    createdAt: null;
+    updatedAt: null; id: string 
+}[] }) | undefined> {
     const room = await db
       .select()
       .from(table.room)
-      .where(eq(table.room.id, id));
-    return room[0];
+      .where(eq(table.room.id, id))
+      .limit(1);
+
+    if (!room[0]) return undefined;
+
+    const users = await db
+      .select({ userId: table.user_room.userId })
+      .from(table.user_room)
+      .where(eq(table.user_room.roomId, id));
+
+    return {
+      ...room[0],
+      users: users.map((user) => ({
+        id: user.userId,
+        name: null,
+        email: null,
+        createdAt: null,
+        updatedAt: null,
+      })),
+    };
   }
 
   static async getPrivateChat(
     userId1: string,
     userId2: string
-  ): Promise<table.Room | undefined> {
+  ): Promise<(table.Room & { users: { id: string }[] }) | undefined> {
     const [smallerId, largerId] = [userId1, userId2].sort();
     console.log(
       `Fetching private chat room for users: ${smallerId} and ${largerId}`
     );
     try {
-    const room = await db
-      .select()
-      .from(table.room)
-      .innerJoin(table.user_room, eq(table.user_room.roomId, table.room.id))
-      .where(
-        and(
-          eq(table.user_room.userId, smallerId),
-          exists(
-            db
-              .select()
-              .from(table.user_room)
-              .where(
-                and(
-                  eq(table.user_room.roomId, table.room.id),
-                  eq(table.user_room.userId, largerId)
+      const room = await db
+        .select()
+        .from(table.room)
+        .innerJoin(table.user_room, eq(table.user_room.roomId, table.room.id))
+        .where(
+          and(
+            eq(table.user_room.userId, smallerId),
+            exists(
+              db
+                .select()
+                .from(table.user_room)
+                .where(
+                  and(
+                    eq(table.user_room.roomId, table.room.id),
+                    eq(table.user_room.userId, largerId)
+                  )
                 )
-              )
+            )
           )
         )
-      )
-      .limit(1);
-      console.log("Room found:", room);
-    return room[0]?.room;
+        .limit(1);
+
+      if (!room[0]) return undefined;
+
+      const users = await db
+        .select({ userId: table.user_room.userId })
+        .from(table.user_room)
+        .where(eq(table.user_room.roomId, room[0].room.id));
+
+      return {
+        ...room[0].room,
+        users: users.map((user) => ({ id: user.userId })),
+      };
     } catch (error) {
       console.error("Error fetching private chat room:", error);
       throw new Error("Error fetching private chat room");
@@ -84,6 +136,18 @@ export class RoomRepository {
     if (!userId) {
       throw new Error("User ID is required");
     }
+
+    // Verificar si el usuario existe
+    const userExists = await db
+      .select()
+      .from(table.user)
+      .where(eq(table.user.id, userId))
+      .limit(1);
+
+    if (userExists.length === 0) {
+      throw new Error(`User with ID ${userId} does not exist`);
+    }
+
     const id = Snowflake.generate(new Date());
     await db.insert(table.user_room).values({
       id,
@@ -93,12 +157,17 @@ export class RoomRepository {
       joinedAt: new Date(),
     });
   }
-  
 
   static async getAllRooms(userId: string): Promise<{
     id: string;
     name: string | null;
-    users: { id: string }[];
+    users: { 
+      id: string;
+      name: string | null;
+      email: string | null;
+      createdAt?: Date;
+      updatedAt?: Date;
+     }[];
   }[]> {
     // Usando drizzle para obtener todas las salas y los usuarios de cada sala
     const roomsRaw = await db
@@ -111,26 +180,43 @@ export class RoomRepository {
       .where(eq(table.user_room.userId, userId));
 
     // Para cada sala, obtener todos los usuarios (solo id) usando drizzle
-    const roomIds = roomsRaw.map(r => r.id);
-    let usersByRoom: Record<string, { id: string }[]> = {};
+    const roomIds = roomsRaw.map((r) => r.id);
+    let usersByRoom: Record<string, { id: string; name?: string; email?: string; createdAt?: Date; updatedAt?: Date }[]> = {};
     if (roomIds.length > 0) {
       const usersRaw = await db
         .select({
           roomId: table.user_room.roomId,
           userId: table.user_room.userId,
+          name: table.user.username,
+          email: table.user.email,
+          createdAt: table.user.createdAt,
+          updatedAt: table.user.updatedAt,
         })
         .from(table.user_room)
+        .innerJoin(table.user, eq(table.user.id, table.user_room.userId))
         .where(inArray(table.user_room.roomId, roomIds));
-      for (const { roomId, userId } of usersRaw) {
+      for (const { roomId, userId, name, email, createdAt, updatedAt } of usersRaw) {
         if (!usersByRoom[roomId]) usersByRoom[roomId] = [];
-        usersByRoom[roomId].push({ id: userId });
+        usersByRoom[roomId].push({ 
+          id: userId, 
+          name, 
+          email, 
+          createdAt: createdAt || undefined, 
+          updatedAt: updatedAt || undefined 
+        });
       }
     }
 
-    return roomsRaw.map(room => ({
+    return roomsRaw.map((room) => ({
       id: room.id,
       name: room.name,
-      users: usersByRoom[room.id] || [],
+      users: (usersByRoom[room.id] || []).map((user) => ({
+        id: user.id,
+        name: user.name || null, // Asegurar que `name` sea nulo si no está definido
+        email: user.email || null, // Asegurar que `email` sea nulo si no está definido
+        createdAt: user.createdAt || undefined, // Asegurar que `createdAt` sea undefined si no está definido
+        updatedAt: user.updatedAt || undefined, // Asegurar que `updatedAt` sea undefined si no está definido
+      })),
     }));
   }
 }

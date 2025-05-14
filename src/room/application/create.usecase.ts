@@ -4,18 +4,27 @@ import { InternalServerError } from "../../shared/infrastructure/errors";
 
 export const CreateRoomRequestSchema = t.Object({
   name: t.Nullable(t.String()),
-  userIds: t.Array(t.String()), // @Todo: Incluir ellos usuairos.
+  userIds: t.Array(t.String()), 
 });
 
 export const CreateRoomResponseSchema = t.Object({
   status: t.Literal("success"),
   data: t.Object({
-  room: t.Object({
-    id: t.String(),
-    name: t.Nullable(t.String()),
-    createdAt: t.Date(),
-    updatedAt: t.Date(),
-  }),
+    room: t.Object({
+      id: t.String(),
+      name: t.Nullable(t.String()),
+      createdAt: t.Date(),
+      updatedAt: t.Date(),
+      users: t.Array(
+        t.Object({
+          id: t.String(),
+          name: t.Optional(t.String()),
+          email: t.Optional(t.String()),
+          createdAt: t.Optional(t.Date()),
+          updatedAt: t.Optional(t.Date()),
+        })
+      ),
+    }),
   }),
 });
 
@@ -30,43 +39,43 @@ export type CreateRoomError = Static<typeof CreateRoomErrorSchema>;
 
 export const createRoom = async (room: CreateRoomRequest, userId: string) => {
   try {
-    // Si es un chat privado entre dos personas, buscar primero si existe
-    if ([userId, ...room.userIds].length === 2) {
-      const existingRoom = await RoomRepository.getPrivateChat(
-        userId,
-        room.userIds[0]
-      );
+    if (room.userIds.length === 2) {
+      const existingRoom = await RoomRepository.getPrivateChat(room.userIds[0], room.userIds[1]);
 
       if (existingRoom) {
         return {
-          room: {
-            id: existingRoom.id,
-            name: existingRoom.name,
-            createdAt: existingRoom.createdAt,
-            updatedAt: existingRoom.updatedAt,
-          },
+              id: existingRoom.id,
+              name: existingRoom.name,
+              createdAt: existingRoom.createdAt,
+              updatedAt: existingRoom.updatedAt,
+              users: existingRoom.users,
         };
       }
     }
-    // Crear la sala
+
     const newRoom = await RoomRepository.create({ name: room.name ?? null });
 
-    // Agregar usuarios a la sala
     for (const user of new Set([userId, ...room.userIds])) {
       await RoomRepository.addUserToRoom(user, newRoom.id!);
     }
 
-    // Ensure all required fields are returned
+    const users = await RoomRepository.getById(newRoom.id!);
+
     return {
-      room: {
-        id: newRoom.id!,
-        name: newRoom.name ?? null,
-        createdAt: newRoom.createdAt!,
-        updatedAt: newRoom.updatedAt!,
-      },
+          id: newRoom.id!,
+          name: newRoom.name ?? null,
+          createdAt: newRoom.createdAt!,
+          updatedAt: newRoom.updatedAt!,
+          users: users?.users.map((user) => ({
+            id: user.id,
+            name: user.name, 
+            email: user.email, 
+            createdAt: user.createdAt, 
+            updatedAt: user.updatedAt, 
+          })) || [],
     };
   } catch (error) {
     console.log(error);
-    throw new InternalServerError(); // Throw error instead of returning status
+    throw new InternalServerError();
   }
 };

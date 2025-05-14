@@ -6,7 +6,6 @@ export const RegisterUserRequestSchema = t.Object({
   username: t.String(),
   email: t.String(),
   password: t.String(),
-  date: t.String(),
 });
 
 export const RegisteUserResponseSchema = t.Object({
