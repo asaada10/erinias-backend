@@ -54,11 +54,12 @@ export class RoomRepository {
   }
 
   static async getById(id: string): Promise<(table.Room & { users: {
-    name: null;
-    email: null;
-    createdAt: null;
-    updatedAt: null; id: string 
-}[] }) | undefined> {
+    id: string;
+    name: string | null;
+    email: string | null;
+    createdAt?: Date;
+    updatedAt?: Date;
+  }[] }) | undefined> {
     const room = await db
       .select()
       .from(table.room)
@@ -68,18 +69,25 @@ export class RoomRepository {
     if (!room[0]) return undefined;
 
     const users = await db
-      .select({ userId: table.user_room.userId })
+      .select({
+        userId: table.user_room.userId,
+        name: table.user.username,
+        email: table.user.email,
+        createdAt: table.user.createdAt,
+        updatedAt: table.user.updatedAt,
+      })
       .from(table.user_room)
+      .innerJoin(table.user, eq(table.user.id, table.user_room.userId))
       .where(eq(table.user_room.roomId, id));
 
     return {
       ...room[0],
       users: users.map((user) => ({
         id: user.userId,
-        name: null,
-        email: null,
-        createdAt: null,
-        updatedAt: null,
+        name: user.name || null, 
+        email: user.email || null, 
+        createdAt: user.createdAt || undefined, 
+        updatedAt: user.updatedAt || undefined, 
       })),
     };
   }

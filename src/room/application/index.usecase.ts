@@ -14,6 +14,15 @@ export const GetRoomResponseSchema = t.Object({
       createdAt: t.Date(),
       updatedAt: t.Date(),
       domainId: t.Optional(t.Union([t.String(), t.Null()])),
+      users: t.Array(
+        t.Object({
+          id: t.String(),
+          name: t.Optional(t.Union([t.String(), t.Null()])),
+          email: t.Optional(t.Union([t.String(), t.Null()])),
+          createdAt: t.Optional(t.Union([t.Date(), t.Null()])),
+          updatedAt: t.Optional(t.Union([t.Date(), t.Null()])),
+        })
+      ),
     }),
   }),
 });
@@ -31,7 +40,6 @@ export const getRoom = async (id: string): Promise<GetRoomResponse> => {
     if (!room) {
       throw new Error("Room not found");
     }
-
     return {
       status: "success",
       data: {
@@ -41,6 +49,13 @@ export const getRoom = async (id: string): Promise<GetRoomResponse> => {
           createdAt: room.createdAt ?? new Date(),
           updatedAt: room.updatedAt ?? new Date(),
           domainId: room.domainId!,
+          users: room.users.map((user) => ({
+            id: user.id,
+            name: user.name ?? null,
+            email: user.email ?? null,
+            createdAt: user.createdAt ?? null,
+            updatedAt: user.updatedAt ?? null,
+          })),
         }
       }
     };

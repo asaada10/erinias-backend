@@ -4,12 +4,7 @@ import { WS } from "../../shared/infrastructure/utils/types";
 import Token from "../../shared/infrastructure/db/token";
 import { getAllRooms } from "../../room/application/all.usecase";
 import { connectionManager } from "../application/connectionManager";
-// @TODO: Mostrar información en la barra lateral
-// Mostrar información del usuario.
-// Crear chats grupales (si se puede).
-// Terminar la documentación.
-// Descartar enlaces inválidos.
-// Mapa para gestionar las suscripciones de los WebSockets a las salas
+
 const roomSubscriptions: Record<string, Set<WS>> = {};
 
 export const WsController = new Elysia().group("/ws", (app) =>
@@ -49,10 +44,7 @@ export const WsController = new Elysia().group("/ws", (app) =>
 
         await joinRoom(ws, data.room);
 
-        if (data.type === "join") {
-          await joinRoom(ws, data.room);
-        }
-
+  
         if (data.type === "message") {
           console.log("Mensaje recibido:", data);
           await sendMessage(ws, data.room, data.content, data.domain);

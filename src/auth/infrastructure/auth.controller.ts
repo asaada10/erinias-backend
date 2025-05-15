@@ -15,6 +15,10 @@ import {
   RefreshUserResponseSchema,
 } from "../application/refresh.usecase";
 import { otkUseCase, OtkUserResponseSchema } from "../application/otk.usecase";
+import {
+  logoutUseCase,
+  LogoutUserResponseSchema,
+} from "../application/logout.usecase";
 import { AppError } from "../../shared/infrastructure/errors";
 import Base62 from "../../shared/infrastructure/utils/Base62";
 import Snowflake from "../../shared/infrastructure/utils/Snowflake";
@@ -162,6 +166,39 @@ export const AuthController = new Elysia().group("/auth", (app) =>
           tags: ["Auth"],
           summary: "Refresh Token",
           description: "Generate a new access and refresh token",
+        },
+      }
+    )
+    .post(
+      "/logout",
+      async ({ set, cookie }) => {
+        try {
+          const { message } = await logoutUseCase(cookie);
+          return { status: "success", data: { message } };
+        } catch (error) {
+          set.status = 400;
+          return {
+            status: "error",
+            message:
+              error instanceof Error ? error.message : "Logout failed",
+          };
+        }
+      },
+      {
+        response: {
+          200: t.Object({
+            status: t.Literal("success"),
+            data: LogoutUserResponseSchema,
+          }),
+          400: t.Object({
+            status: t.Literal("error"),
+            message: t.String(),
+          }),
+        },
+        detail: {
+          tags: ["Auth"],
+          summary: "Logout",
+          description: "Logout user and clear tokens",
         },
       }
     )
